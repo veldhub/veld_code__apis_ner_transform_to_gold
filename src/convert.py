@@ -5,22 +5,6 @@ from dataclasses import dataclass
 from typing import List
 
 
-# nlp = spacy.load('de_core_news_md')
-
-
-@dataclass
-class SqueezedTextWithEntities:
-    @dataclass
-    class EntitiesWithPositions:
-        index_beginning: int
-        index_end: int
-        entity: str
-        text_part: str
-    
-    text_squeezed: str
-    entities_with_positions: List[EntitiesWithPositions]
-    
-
 @dataclass
 class TextEntitiesCarrier:
     @dataclass
@@ -30,114 +14,24 @@ class TextEntitiesCarrier:
         entity_type: str
     
     text_raw: str
-    entities: List[EntityMarker]
+    entity_marker_list: List[EntityMarker]
     
-    
-text_entities_list: List[TextEntitiesCarrier] = []
-
-
-def convert_to_squeezed_text_with_entities(tuple_with_text_ner_tuples) -> SqueezedTextWithEntities:
-    def squeeze_text(text):
-        # return text.replace(" ", "").replace("\t", "").replace("\n", "") # TODO
-        return text.replace(" ", "") # TODO
-    
-    def squeeze_text_part_and_indices(text_original, index_beginning_original, index_end_original):
-        def calcualate_index_squeezed(text_original, index_original):
-            text_original_until_index = text_original[:index_original]
-            index_diff = text_original_until_index.count(" ")
-            return index_original - index_diff
-        
-        text_squeezed = squeeze_text(text_original)
-        index_beginning_squeezed = calcualate_index_squeezed(
-            text_original,
-            index_beginning_original
-        )
-        index_end_squeezed = calcualate_index_squeezed(
-            text_original,
-            index_end_original
-        )
-        text_part_original_squeezed = squeeze_text(
-            text_original[index_beginning_original:index_end_original]
-        )
-        text_part_squeezed = text_squeezed[index_beginning_squeezed:index_end_squeezed]
-        if text_part_original_squeezed != text_part_squeezed:
-            raise Exception
-        return text_part_squeezed, index_beginning_squeezed, index_end_squeezed
-        
-    def main():
-        entities_with_positions = []
-        text_original = tuple_with_text_ner_tuples[0]
-        text_squeezed = squeeze_text(text_original)
-        for ner_tuple in tuple_with_text_ner_tuples[1]["entities"]:
-            t_p_s, i_b_s, i_e_s = squeeze_text_part_and_indices(
-                text_original=text_original,
-                index_beginning_original=ner_tuple[0],
-                index_end_original=ner_tuple[1],
+    def __str__(self):
+        em_str_list = []
+        for em in self.entity_marker_list:
+            em_str_list.append(
+                f"({em.index_beginning}, {em.index_end}, '{em.entity_type}'"
+                f", '{self.text_raw[em.index_beginning:em.index_end]})'"
             )
-            entities_with_positions.append(
-                SqueezedTextWithEntities.EntitiesWithPositions(
-                    index_beginning=i_b_s,
-                    index_end=i_e_s,
-                    entity=ner_tuple[2],
-                    text_part=t_p_s
-                )
-            )
-            
-        return SqueezedTextWithEntities(
-            text_squeezed=text_squeezed,
-            entities_with_positions=entities_with_positions
+        return (
+            f"text_raw: {self.text_raw}, entity_marker_list: {em_str_list}"
         )
     
-    return main()
+    def __repr__(self):
+        return self.__str__()
 
 
-def convert_to_iob(text_original: str, stwe: SqueezedTextWithEntities):
-    doc = nlp(text_original) # TODO: check if "\t" and "\n" can be excluded
-    index_current_beginning = 0
-    result = []
-    count_ner_token = 0
-    count_ner_real = len(stwe.entities_with_positions)
-    for token in doc:
-        if token.text == " ":
-            raise Exception
-        # elif token == "\t" # TODO
-        index_current_end = index_current_beginning + len(token)
-        iob = "O"
-        for ewp in stwe.entities_with_positions:
-            if (
-                ewp.index_beginning <= index_current_beginning < ewp.index_end
-                or ewp.index_beginning < index_current_end < ewp.index_end
-            ) or (
-                index_current_beginning <= ewp.index_beginning < index_current_end
-                or index_current_beginning < ewp.index_end < index_current_end
-            ):
-                iob = "I"
-                count_ner_token += 1
-                break
-        result.append((token.text, iob))
-        index_current_beginning = index_current_end
-    
-    return result, count_ner_token, count_ner_real
-
-
-# def check_overlap_of_train_eval_data(train_data_text_only, eval_data_text_only):
-#     count_train_in_eval = 0
-#     count_eval_in_train = 0
-#     for i, text in enumerate(train_data_text_only):
-#         if text in eval_data_text_only:
-#             # print(f"train text in eval data at index: {i}")
-#             count_train_in_eval += 1
-#
-#     for i, text in enumerate(eval_data_text_only):
-#         if text in train_data_text_only:
-#             # print(f"eval text in train data at index: {i}")
-#             count_eval_in_train += 1
-#
-#     print(f"count of sentences of evaluation data in train data: {count_eval_in_train}")
-#     print(f"count of sentences of train data in evaluation data: {count_train_in_eval}")
-    
-    
-def read_pickle_individual(pickle_file_path):
+def read_data_from_pickle(file_path):
     def pickle_stats(pickle_data):
         pickle_stats = {}
         for d in pickle_data:
@@ -147,35 +41,56 @@ def read_pickle_individual(pickle_file_path):
             pickle_stats[l] = c
         print(f"pickle_stats: {pickle_stats}")
     
-    print(f"loading: {pickle_file_path}")
-    return pickle.load(open(pickle_file_path, "rb"))
+    return pickle.load(open(file_path, "rb"))
 
 
-def convert_pickled_ner_tuples(pickle_file_path):
-    converted_data = None
-    pickle_data = read_pickle_individual(pickle_file_path)
-    
-    for data_tuple in pickle_data:
-        doc = data_tuple[2]
-    
-    print("convert_pickled_ner_tuples")
-    
-    return pickle_data
+def convert_text_entities_tuple_format(text_entities_tuple_list):
+    text_entities_carrier_list_tmp = []
+    for text_entities_tuple in text_entities_tuple_list:
+        entity_marker_list_tmp = []
+        for entities_tuple in text_entities_tuple[1]["entities"]:
+            entity_marker_list_tmp.append(
+                TextEntitiesCarrier.EntityMarker(
+                    index_beginning=entities_tuple[0],
+                    index_end=entities_tuple[1],
+                    entity_type=entities_tuple[2],
+                )
+            )
+        
+        text_entities_carrier_list_tmp.append(
+            TextEntitiesCarrier(
+                text_raw=text_entities_tuple[0],
+                entity_marker_list=entity_marker_list_tmp
+            )
+        )
+        
+    return text_entities_carrier_list_tmp
 
 
-def convert_pickled_ner_classes(pickle_file_path):
-    converted_data = None
-    pickle_data = read_pickle_individual(pickle_file_path)
+def convert_text_entities_class_format(text_entities_class_list):
+    text_entities_carrier_list_tmp = []
+    for text_entities_class in text_entities_class_list:
+        entity_marker_list_tmp = []
+        for entities_class in text_entities_class[1]:
+            entity_marker_list_tmp.append(
+                TextEntitiesCarrier.EntityMarker(
+                    index_beginning=entities_class.start,
+                    index_end=entities_class.end,
+                    entity_type=entities_class.label,
+                )
+            )
+        
+        text_entities_carrier_list_tmp.append(
+            TextEntitiesCarrier(
+                text_raw=text_entities_class[0],
+                entity_marker_list=entity_marker_list_tmp
+            )
+        )
     
-    for data_tuple in pickle_data:
-        doc = data_tuple[2]
-    
-    print("convert_pickled_ner_classes")
-    
-    return pickle_data
+    return text_entities_carrier_list_tmp
 
 
-def convert_txt_data(data_txt_path) -> List[TextEntitiesCarrier]:
+def convert_txt_data(file_path):
     def read_data_from_txt(mypath):
         """
         copied from: https://gitlab.oeaw.ac.at/acdh-ch/apis/spacy-ner/-/blob/8e75d3561e617f1bd135d4c06fbb982285f6f544/notebooks/NER%20Place%20Institution.ipynb
@@ -208,52 +123,154 @@ def convert_txt_data(data_txt_path) -> List[TextEntitiesCarrier]:
         
         return mydata
     
-    converted_data_list = []
-    for data_txt_row in read_data_from_txt(data_txt_path):
-        print(data_txt_row)
-        
-    return converted_data_list
+    print(f"convert_txt_data: {file_path}")
+    return convert_text_entities_tuple_format(read_data_from_txt(file_path))
+
+
+def convert_pickled_ner_tuples(file_path):
+    print(f"convert_pickled_ner_tuples: {file_path}")
+    return convert_text_entities_tuple_format(read_data_from_pickle(file_path))
+
+
+def convert_pickled_ner_classes(file_path):
+    print(f"convert_pickled_ner_classes: {file_path}")
+    return convert_text_entities_class_format(read_data_from_pickle(file_path))
 
     
+def evaluate_json_data(file_path, text_entities_carrier_list):
+    """
+    # summary:
+    This function counts the uniqueness of the json data set, to see if the json data is worth
+    converting.
     
-def convert_apis_ner_2020_01_02_until_2020_04_16():
-    # convert_pickled_ner_tuples("/veld/input/ner_apis_2020-01-02_12:34:48/corpus/trainset.pickle")
-    # convert_pickled_ner_tuples("/veld/input/ner_apis_2020-01-02_12:34:48/corpus/evalset.pickle")
-    # convert_pickled_ner_tuples("/veld/input/ner_apis_2020-01-29_13:19:53/corpus/trainset.pickle")
-    convert_pickled_ner_tuples("/veld/input/ner_apis_2020-01-29_13:19:53/corpus/evalset.pickle")
-    # convert_pickled_ner_classes("/veld/input/ner_apis_2020-04-07_15:00:35/corpus/trainset.pickle")
-    # convert_pickled_ner_classes("/veld/input/ner_apis_2020-04-07_15:00:35/corpus/evalset.pickle")
-    convert_pickled_ner_classes("/veld/input/ner_apis_2020-04-16_14:21:46/corpus/trainset.pickle")
-    # convert_pickled_ner_classes("/veld/input/ner_apis_2020-04-16_14:21:46/corpus/evalset.pickle")
+    **spoiler: it's not. It only contains 8 unique texts (and these might be even miscounted given
+    the naive implementation of comparison). So not worth converting.**
+    """
+    count_found = 0
+    count_not_found = 0
+    with open(file_path, "r", encoding="utf-8") as f:
+        for paragraph in json.load(f)["paragraphs"]:
+            found_this = False
+            for tec in text_entities_carrier_list:
+                if paragraph["raw"] in tec.text_raw:
+                    count_found += 1
+                    found_this = True
+                    
+            if not found_this:
+                count_not_found += 1
+                
+        print(f"count_found: {count_found}, count_not_found: {count_not_found}")
 
 
-def convert_2020_04_30():
-    train_data = convert_pickled_ner_classes(
-        f"/veld/input/ner_apis_2020-04-30_11:24:09/corpus/trainset.pickle"
+def convert_all() -> List[TextEntitiesCarrier]:
+    text_entities_carrier_list: List[TextEntitiesCarrier] = []
+    text_entities_carrier_list.extend(
+        convert_txt_data(
+            "/veld/input/ner_apis_2019-12-03_23:32:24/corpus/trainset.txt"
+        )
     )
-    with open(
-        f"/veld/input/ner_apis_2020-04-30_11:24:09/corpus/evalset.json", "r",
-        encoding="utf-8"
-    ) as f:
-        eval_data = json.load(f)["paragraphs"]
+    text_entities_carrier_list.extend(
+        convert_txt_data(
+            "/veld/input/ner_apis_2019-12-03_23:32:24/corpus/evalset.txt"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_tuples(
+            "/veld/input/ner_apis_2020-01-02_12:34:48/corpus/trainset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_tuples(
+            "/veld/input/ner_apis_2020-01-02_12:34:48/corpus/evalset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_tuples(
+            "/veld/input/ner_apis_2020-01-29_13:19:53/corpus/trainset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_tuples(
+            "/veld/input/ner_apis_2020-01-29_13:19:53/corpus/evalset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_classes(
+            "/veld/input/ner_apis_2020-04-07_15:00:35/corpus/trainset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_classes(
+            "/veld/input/ner_apis_2020-04-07_15:00:35/corpus/evalset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_classes(
+            "/veld/input/ner_apis_2020-04-16_14:21:46/corpus/trainset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_classes(
+            "/veld/input/ner_apis_2020-04-16_14:21:46/corpus/evalset.pickle"
+        )
+    )
+    text_entities_carrier_list.extend(
+        convert_pickled_ner_classes(
+            "/veld/input/ner_apis_2020-04-30_11:24:09/corpus/trainset.pickle"
+        )
+    )
+    # no conversion, just an evaluation of potential redundancy with regard to other data sets
+    evaluate_json_data(
+        "/veld/input/ner_apis_2020-04-30_11:24:09/corpus/evalset.json",
+        text_entities_carrier_list
+    )
+    print(f"done. length of raw covnerted data: {len(text_entities_carrier_list)}")
+    return text_entities_carrier_list
+    
+
+def deduplicate(text_entities_carrier_list): #TODO: validate this really properly
+    tec_dict = {}
+    for tec in text_entities_carrier_list:
+        tec_pre = tec_dict.get(tec.text_raw, None)
+        if tec_pre is not None and tec_pre.entity_marker_list != tec.entity_marker_list:
+            em_set_tmp = set()
+            for em in tec_pre.entity_marker_list:
+                em_tuple = (em.index_beginning, em.index_end, em.entity_type)
+                em_set_tmp.add(em_tuple)
+            
+            for em in tec.entity_marker_list:
+                em_tuple = (em.index_beginning, em.index_end, em.entity_type)
+                em_set_tmp.add(em_tuple)
+            
+            em_list = list(em_set_tmp)
+            em_list.sort(key=lambda x : x[0])
+            tec.entity_marker_list = []
+            for em in em_list:
+                tec.entity_marker_list.append(
+                    TextEntitiesCarrier.EntityMarker(
+                        index_beginning=em[0],
+                        index_end=em[1],
+                        entity_type=em[2],
+                    )
+                )
+                
+        tec_dict[tec.text_raw] = tec
+    
+    text_entities_carrier_list_new = []
+    for tec in tec_dict.values():
+        text_entities_carrier_list_new.append(tec)
+        
+    return text_entities_carrier_list_new
 
 
-def write_iob_list(iob_list, file_path):
-    pass
-
-
-def remove_redundancies_from_iob_list(iob_list):
-    return iob_list
+def write_to_file(text_entities_carrier_list):
+    pass # TODO
 
 
 def main():
-    text_entities_list.extend(
-        convert_txt_data("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/trainset.txt")
-    )
-    text_entities_list.extend(
-        convert_txt_data("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/evalset.txt")
-    )
-    convert_apis_ner_2020_01_02_until_2020_04_16()
+    text_entities_carrier_list = convert_all()
+    text_entities_carrier_list = deduplicate(text_entities_carrier_list)
+    write_to_file(text_entities_carrier_list)
 
 
 main()
