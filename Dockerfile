@@ -8,6 +8,6 @@ RUN pip install de-core-news-md@https://github.com/explosion/spacy-models/releas
 #RUN pip install notebook==6.5.4
 #RUN pip install de_dep_news_trf@https://github.com/explosion/spacy-models/releases/download/de_dep_news_trf-3.5.0/de_dep_news_trf-3.5.0.tar.gz
 #RUN pip install ipywidgets==8.0.7
-#CMD ["python", "/veld/executable/src/converters.py"]
+#CMD ["python", "/veld/executable/src/convert.py"]
 #CMD ["jupyter", "notebook", "--allow-root", "--no-browser", "--NotebookApp.token=''", "--NotebookApp.password=''", "/veld/executable/src"]
 

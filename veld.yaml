@@ -6,6 +6,6 @@ x-veld:
 services:
   veld:
     build: .
-    command: python /veld/executable/src/converters.py
+    command: python /veld/executable/src/convert.py
     volumes:
       - ./:/veld/executable/
