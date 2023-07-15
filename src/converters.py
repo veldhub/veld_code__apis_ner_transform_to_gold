@@ -1,10 +1,12 @@
+import spacy
 import pickle
 import json
 from dataclasses import dataclass
 from typing import List
 
 
-all_datasets = []
+iob_list_all = []
+nlp = spacy.load('de_core_news_md')
 
 
 @dataclass
@@ -79,7 +81,8 @@ def convert_to_iob(text_original: str, stwe: SqueezedTextWithEntities):
     doc = nlp(text_original) # TODO: check if "\t" and "\n" can be excluded
     index_current_beginning = 0
     result = []
-    count_i = 0
+    count_ner_token = 0
+    count_ner_real = len(stwe.entities_with_positions)
     for token in doc:
         if token.text == " ":
             raise Exception
@@ -95,15 +98,12 @@ def convert_to_iob(text_original: str, stwe: SqueezedTextWithEntities):
                 or index_current_beginning < ewp.index_end < index_current_end
             ):
                 iob = "I"
-                count_i += 1
+                count_ner_token += 1
                 break
         result.append((token.text, iob))
         index_current_beginning = index_current_end
-        
-    if count_i < len(stwe.entities_with_positions):
-        raise Exception
-        
-    return result
+    
+    return result, count_ner_token, count_ner_real
 
 
 # def check_overlap_of_train_eval_data(train_data_text_only, eval_data_text_only):
@@ -140,7 +140,6 @@ def read_pickle_individual(pickle_file_path):
 def convert_pickled_ner_tuples(pickle_file_path):
     converted_data = None
     pickle_data = read_pickle_individual(pickle_file_path)
-    all_datasets.append(pickle_data)
     
     for data_tuple in pickle_data:
         doc = data_tuple[2]
@@ -153,7 +152,6 @@ def convert_pickled_ner_tuples(pickle_file_path):
 def convert_pickled_ner_classes(pickle_file_path):
     converted_data = None
     pickle_data = read_pickle_individual(pickle_file_path)
-    all_datasets.append(pickle_data)
     
     for data_tuple in pickle_data:
         doc = data_tuple[2]
@@ -163,11 +161,7 @@ def convert_pickled_ner_classes(pickle_file_path):
     return pickle_data
 
 
-def write_iob_list(iob_list, file_path):
-    pass
-
-
-def convert_apis_ner_2019_12_03():
+def convert_txt_data(data_txt_path):
     def read_data_from_txt(mypath):
         """
         copied from: https://gitlab.oeaw.ac.at/acdh-ch/apis/spacy-ner/-/blob/8e75d3561e617f1bd135d4c06fbb982285f6f544/notebooks/NER%20Place%20Institution.ipynb
@@ -198,16 +192,25 @@ def convert_apis_ner_2019_12_03():
                 i += 1
                 mydata.append((t, e, None, None))
         
-        all_datasets.append(mydata)
         return mydata
     
-    # train_data = read_data_from_txt("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/trainset.txt")
-    eval_data = read_data_from_txt("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/evalset.txt")
-    iob_list = []
-    for eval_data_row in eval_data:
-        stwe = convert_to_squeezed_text_with_entities(eval_data_row)
-        iob_list.append(convert_to_iob(eval_data_row[0], stwe))
-    print
+    def main():
+        iob_list = []
+        count_ner_token = 0
+        count_ner_real = 0
+        for data_txt_row in read_data_from_txt(data_txt_path):
+            stwe = convert_to_squeezed_text_with_entities(data_txt_row)
+            iob_text, count_ner_token_row, count_ner_real_row = convert_to_iob(data_txt_row[0], stwe)
+            iob_list.append(iob_text)
+            count_ner_token += count_ner_token_row
+            count_ner_real += count_ner_real_row
+            
+        print(f"number of tokens with entities: {count_ner_token}")
+        print(f"number of entities assigned in original data: {count_ner_real}")
+        print(f"ratio tokens to real: {round(count_ner_token / count_ner_real, 2)}")
+        return iob_list
+
+    main()
     
     
 def convert_apis_ner_2020_01_02_until_2020_04_16():
@@ -230,10 +233,24 @@ def convert_2020_04_30():
         encoding="utf-8"
     ) as f:
         eval_data = json.load(f)["paragraphs"]
-        all_datasets.append(eval_data)
 
-def foo():
-    convert_pickled_ner_tuples(None)
-    print("XXX")
-    
-import os
+
+def write_iob_list(iob_list, file_path):
+    pass
+
+
+def remove_redundancies_from_iob_list(iob_list):
+    return iob_list
+
+
+def main():
+    iob_list_all.extend(
+        convert_txt_data("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/trainset.txt")
+    )
+    iob_list_all.extend(
+        convert_txt_data("/veld/input/ner_apis_2019-12-03_23:32:24/corpus/evalset.txt")
+    )
+    convert_apis_ner_2020_01_02_until_2020_04_16()
+
+
+main()

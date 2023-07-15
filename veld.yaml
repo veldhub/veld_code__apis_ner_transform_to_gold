@@ -2,21 +2,10 @@ x-veld:
   veld_executable:
     input: "" #TODO
     output: "" #TODO
-#jupyter nbconvert --to script convert.ipynb
+
 services:
   veld:
     build: .
-    command: >
-      sh -c "jupyter nbconvert --to script /veld/executable/src/convert.ipynb
-      && python /veld/executable/src/convert.py"
+    command: python /veld/executable/src/converters.py
     volumes:
       - ./:/veld/executable/
-
-  veld_jupyter:
-    build: .
-    command: jupyter notebook --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password='' /veld/executable/src
-    volumes:
-      - ./:/veld/executable/
-    ports:
-      - 8888:8888
-    network_mode: "host"
