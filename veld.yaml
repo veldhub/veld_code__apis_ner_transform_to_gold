@@ -2,17 +2,17 @@ x-veld:
   executable:
     input:
       path: "/veld/input/"
-      type: "custom"
+      format: "custom"
       kind: "custom"
       description: "This input is hard-wired to the apis spacy-ner repo and not made for generic usage."
     output:
-      path: "./json/"
+      path: "/veld/output/json/"
       format: "json"
       kind:
         - "Gold Data"
         - "Named Entity Recognition Gold Data"
-  scope:
-    - "ETL"
+    scope:
+      - "ETL"
 
 services:
   veld:

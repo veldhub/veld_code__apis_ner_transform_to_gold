@@ -205,7 +205,6 @@ def convert_all() -> List[TextEntCarrier]:
     return text_ent_carrier_list
     
     
-# TODO: validate this really properly
 def deduplicate(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEntCarrier]:
     """
     The parsed data from the steps beforehand contain multiple redundancies. Both in texts and the
