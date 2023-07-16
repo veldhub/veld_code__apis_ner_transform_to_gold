@@ -1,12 +1,13 @@
-import spacy
-import pickle
 import json
+import pickle
+import re
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import List
 
 
 @dataclass
-class TextEntitiesCarrier:
+class TextEntCarrier:
     @dataclass
     class EntityMarker:
         index_beginning: int
@@ -16,6 +17,15 @@ class TextEntitiesCarrier:
     text_raw: str
     entity_marker_list: List[EntityMarker]
     
+    def to_dict(self):
+        return {
+            "text_raw": self.text_raw,
+            "entities": [
+                (em.index_beginning, em.index_end, em.entity_type)
+                for em in self.entity_marker_list
+            ]
+        }
+    
     def __str__(self):
         em_str_list = []
         for em in self.entity_marker_list:
@@ -24,12 +34,12 @@ class TextEntitiesCarrier:
                 f", '{self.text_raw[em.index_beginning:em.index_end]})'"
             )
         return (
-            f"text_raw: {self.text_raw}, entity_marker_list: {em_str_list}"
+            f"text_raw: '{self.text_raw}', entity_marker_list: {em_str_list}"
         )
     
     def __repr__(self):
         return self.__str__()
-
+    
 
 def read_data_from_pickle(file_path):
     def pickle_stats(pickle_data):
@@ -45,49 +55,49 @@ def read_data_from_pickle(file_path):
 
 
 def convert_text_entities_tuple_format(text_entities_tuple_list):
-    text_entities_carrier_list_tmp = []
+    text_ent_carrier_list_tmp = []
     for text_entities_tuple in text_entities_tuple_list:
         entity_marker_list_tmp = []
         for entities_tuple in text_entities_tuple[1]["entities"]:
             entity_marker_list_tmp.append(
-                TextEntitiesCarrier.EntityMarker(
+                TextEntCarrier.EntityMarker(
                     index_beginning=entities_tuple[0],
                     index_end=entities_tuple[1],
                     entity_type=entities_tuple[2],
                 )
             )
         
-        text_entities_carrier_list_tmp.append(
-            TextEntitiesCarrier(
+        text_ent_carrier_list_tmp.append(
+            TextEntCarrier(
                 text_raw=text_entities_tuple[0],
                 entity_marker_list=entity_marker_list_tmp
             )
         )
         
-    return text_entities_carrier_list_tmp
+    return text_ent_carrier_list_tmp
 
 
 def convert_text_entities_class_format(text_entities_class_list):
-    text_entities_carrier_list_tmp = []
+    text_ent_carrier_list_tmp = []
     for text_entities_class in text_entities_class_list:
         entity_marker_list_tmp = []
         for entities_class in text_entities_class[1]:
             entity_marker_list_tmp.append(
-                TextEntitiesCarrier.EntityMarker(
+                TextEntCarrier.EntityMarker(
                     index_beginning=entities_class.start,
                     index_end=entities_class.end,
                     entity_type=entities_class.label,
                 )
             )
         
-        text_entities_carrier_list_tmp.append(
-            TextEntitiesCarrier(
+        text_ent_carrier_list_tmp.append(
+            TextEntCarrier(
                 text_raw=text_entities_class[0],
                 entity_marker_list=entity_marker_list_tmp
             )
         )
     
-    return text_entities_carrier_list_tmp
+    return text_ent_carrier_list_tmp
 
 
 def convert_txt_data(file_path):
@@ -137,7 +147,7 @@ def convert_pickled_ner_classes(file_path):
     return convert_text_entities_class_format(read_data_from_pickle(file_path))
 
     
-def evaluate_json_data(file_path, text_entities_carrier_list):
+def evaluate_json_data(file_path, text_ent_carrier_list):
     """
     # summary:
     This function counts the uniqueness of the json data set, to see if the json data is worth
@@ -151,7 +161,7 @@ def evaluate_json_data(file_path, text_entities_carrier_list):
     with open(file_path, "r", encoding="utf-8") as f:
         for paragraph in json.load(f)["paragraphs"]:
             found_this = False
-            for tec in text_entities_carrier_list:
+            for tec in text_ent_carrier_list:
                 if paragraph["raw"] in tec.text_raw:
                     count_found += 1
                     found_this = True
@@ -162,59 +172,59 @@ def evaluate_json_data(file_path, text_entities_carrier_list):
         print(f"count_found: {count_found}, count_not_found: {count_not_found}")
 
 
-def convert_all() -> List[TextEntitiesCarrier]:
-    text_entities_carrier_list: List[TextEntitiesCarrier] = []
-    text_entities_carrier_list.extend(
+def convert_all() -> List[TextEntCarrier]:
+    text_ent_carrier_list: List[TextEntCarrier] = []
+    text_ent_carrier_list.extend(
         convert_txt_data(
             "/veld/input/ner_apis_2019-12-03_23:32:24/corpus/trainset.txt"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_txt_data(
             "/veld/input/ner_apis_2019-12-03_23:32:24/corpus/evalset.txt"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_tuples(
             "/veld/input/ner_apis_2020-01-02_12:34:48/corpus/trainset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_tuples(
             "/veld/input/ner_apis_2020-01-02_12:34:48/corpus/evalset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_tuples(
             "/veld/input/ner_apis_2020-01-29_13:19:53/corpus/trainset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_tuples(
             "/veld/input/ner_apis_2020-01-29_13:19:53/corpus/evalset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_classes(
             "/veld/input/ner_apis_2020-04-07_15:00:35/corpus/trainset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_classes(
             "/veld/input/ner_apis_2020-04-07_15:00:35/corpus/evalset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_classes(
             "/veld/input/ner_apis_2020-04-16_14:21:46/corpus/trainset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_classes(
             "/veld/input/ner_apis_2020-04-16_14:21:46/corpus/evalset.pickle"
         )
     )
-    text_entities_carrier_list.extend(
+    text_ent_carrier_list.extend(
         convert_pickled_ner_classes(
             "/veld/input/ner_apis_2020-04-30_11:24:09/corpus/trainset.pickle"
         )
@@ -222,17 +232,23 @@ def convert_all() -> List[TextEntitiesCarrier]:
     # no conversion, just an evaluation of potential redundancy with regard to other data sets
     evaluate_json_data(
         "/veld/input/ner_apis_2020-04-30_11:24:09/corpus/evalset.json",
-        text_entities_carrier_list
+        text_ent_carrier_list
     )
-    print(f"done. length of raw covnerted data: {len(text_entities_carrier_list)}")
-    return text_entities_carrier_list
+    print(f"done. length of raw covnerted data: {len(text_ent_carrier_list)}")
+    return text_ent_carrier_list
     
-
-def deduplicate(text_entities_carrier_list): #TODO: validate this really properly
+#TODO: validate this really properly
+def deduplicate(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEntCarrier]:
+    """
+    The parsed data from the steps beforehand contain multiple redundancies. Both in texts and the
+    entities some texts are assigned on. This function removes all of them.
+    """
     tec_dict = {}
-    for tec in text_entities_carrier_list:
+    for tec in text_ent_carrier_list:
         tec_pre = tec_dict.get(tec.text_raw, None)
+        # If some text with entities already exists before it, merge the two
         if tec_pre is not None and tec_pre.entity_marker_list != tec.entity_marker_list:
+            # Create a temporary set to guarantee the uniquness of tag, beginning, end
             em_set_tmp = set()
             for em in tec_pre.entity_marker_list:
                 em_tuple = (em.index_beginning, em.index_end, em.entity_type)
@@ -242,12 +258,16 @@ def deduplicate(text_entities_carrier_list): #TODO: validate this really properl
                 em_tuple = (em.index_beginning, em.index_end, em.entity_type)
                 em_set_tmp.add(em_tuple)
             
-            em_list = list(em_set_tmp)
-            em_list.sort(key=lambda x : x[0])
+            # turn the set into a list
+            em_list_tmp = list(em_set_tmp)
+            # several order calls to make the resulting data identically reproducible.
+            em_list_tmp.sort(key=lambda x : x[2])
+            em_list_tmp.sort(key=lambda x : x[1])
+            em_list_tmp.sort(key=lambda x : x[0])
             tec.entity_marker_list = []
-            for em in em_list:
+            for em in em_list_tmp:
                 tec.entity_marker_list.append(
-                    TextEntitiesCarrier.EntityMarker(
+                    TextEntCarrier.EntityMarker(
                         index_beginning=em[0],
                         index_end=em[1],
                         entity_type=em[2],
@@ -256,21 +276,35 @@ def deduplicate(text_entities_carrier_list): #TODO: validate this really properl
                 
         tec_dict[tec.text_raw] = tec
     
-    text_entities_carrier_list_new = []
+    text_ent_carrier_list_new = []
     for tec in tec_dict.values():
-        text_entities_carrier_list_new.append(tec)
+        text_ent_carrier_list_new.append(tec)
         
-    return text_entities_carrier_list_new
+    return text_ent_carrier_list_new
 
 
-def write_to_file(text_entities_carrier_list):
-    pass # TODO
+def remove_ner_noise(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEntCarrier]:
+    """
+    """
+    for tec in text_ent_carrier_list:
+        for em in tec.entity_marker_list:
+            em.entity_type = re.sub(r"-[0-9]*$", "", em.entity_type)
+            
+    return text_ent_carrier_list
 
+
+def write_to_file(text_ent_carrier_list: List[TextEntCarrier], output_path):
+    text_ent_dict_list = [tec.to_dict() for tec in text_ent_carrier_list]
+    with open(output_path, "w") as f:
+        json.dump(text_ent_dict_list, f, indent=2)
+        
 
 def main():
-    text_entities_carrier_list = convert_all()
-    text_entities_carrier_list = deduplicate(text_entities_carrier_list)
-    write_to_file(text_entities_carrier_list)
+    text_ent_carrier_list = convert_all()
+    text_ent_carrier_list = deduplicate(text_ent_carrier_list)
+    write_to_file(text_ent_carrier_list, "/veld/output/apis_ner__all_entities.json")
+    text_ent_carrier_list = remove_ner_noise(text_ent_carrier_list)
+    write_to_file(text_ent_carrier_list, "/veld/output/apis_ner__simple_entities.json")
 
 
 main()

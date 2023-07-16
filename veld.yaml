@@ -1,5 +1,5 @@
 x-veld:
-  veld_executable:
+  executable:
     input: "" #TODO
     output: "" #TODO
 
