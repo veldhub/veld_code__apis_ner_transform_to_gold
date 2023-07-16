@@ -1,11 +1,21 @@
 x-veld:
   executable:
-    input: "" #TODO
-    output: "" #TODO
+    input:
+      path: "/veld/input/"
+      type: "custom"
+      kind: "custom"
+      description: "This input is hard-wired to the apis spacy-ner repo and not made for generic usage."
+    output:
+      path: "./json/"
+      format: "json"
+      kind:
+        - "Gold Data"
+        - "Named Entity Recognition Gold Data"
+  scope:
+    - "ETL"
 
 services:
   veld:
     build: .
-    command: python /veld/executable/src/convert.py
     volumes:
-      - ./:/veld/executable/
+      - ./src/:/veld/executable/
