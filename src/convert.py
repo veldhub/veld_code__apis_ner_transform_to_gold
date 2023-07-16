@@ -271,7 +271,7 @@ def main():
     print("Starting deduplication.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     print(f"Done with deduplication. Length of deduplicated data: {len(text_ent_carrier_list)}")
-    write_to_file(text_ent_carrier_list, "/veld/output/apis_ner__full_entities.json")
+    write_to_file(text_ent_carrier_list, "/veld/output/json/apis_ner__full_entities.json")
     # removing noise
     print("Starting removal of noise in NER tags.")
     text_ent_carrier_list = remove_ner_noise(text_ent_carrier_list)
@@ -280,8 +280,8 @@ def main():
     print("Starting deduplication again for denoised data.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     print(f"Done with deduplication.")
-    write_to_file(text_ent_carrier_list, "/veld/output/apis_ner__simplified_entities.json")
-    print(f"All Done and persisted to '/veld/output/'.")
+    write_to_file(text_ent_carrier_list, "/veld/output/json/apis_ner__simplified_entities.json")
+    print(f"All Done and persisted to '/veld/output/json/'.")
 
 
 main()
