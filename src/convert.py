@@ -284,4 +284,6 @@ def main():
     print(f"All Done and persisted to '/veld/output/json/'.")
 
 
-main()
+if __name__ == "__main__":
+    print("with __main__")
+    main()
