@@ -2,14 +2,16 @@ x-veld:
   executable:
     about:
       description: "hard-coded conversion of apis ner models to custom json format."
-      scope: "ETL"
+      scope:
+        - "ETL"
+        - "data sanitization"
     input:
       path: "/veld/input/"
       format: "custom"
       kind: "custom"
       description: "This input is hard-wired to the apis spacy-ner repo and not made for generic usage."
     output:
-      path: "/veld/output/json/"
+      path: "/veld/output/"
       format: "json"
       kind:
         - "Gold Data"
