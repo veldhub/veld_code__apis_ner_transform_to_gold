@@ -1,5 +1,8 @@
 x-veld:
   executable:
+    about:
+      description: "hard-coded conversion of apis ner models to custom json format."
+      scope: "ETL"
     input:
       path: "/veld/input/"
       format: "custom"
@@ -10,12 +13,12 @@ x-veld:
       format: "json"
       kind:
         - "Gold Data"
+        - "NLP Gold Data"
         - "Named Entity Recognition Gold Data"
-    scope:
-      - "ETL"
 
 services:
   veld:
     build: .
     volumes:
       - ./src/:/veld/executable/
+
