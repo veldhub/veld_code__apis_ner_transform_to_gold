@@ -1,8 +1,12 @@
 import json
+import os
 import pickle
 import re
 from dataclasses import dataclass
 from typing import List
+
+
+OUT_JSON_UNCLEANED_PATH = os.getenv("out_json_uncleaned_path")
 
 
 @dataclass
@@ -259,7 +263,7 @@ def remove_ner_noise(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEn
 def write_to_file(text_ent_carrier_list: List[TextEntCarrier], output_path):
     text_ent_dict_list = [tec.to_dict() for tec in text_ent_carrier_list]
     with open(output_path, "w") as f:
-        json.dump(text_ent_dict_list, f, indent=2)
+        json.dump(text_ent_dict_list, f, ensure_ascii=False, indent=2)
         
 
 def main():
@@ -271,7 +275,7 @@ def main():
     print("Starting deduplication.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     print(f"Done with deduplication. Length of deduplicated data: {len(text_ent_carrier_list)}")
-    write_to_file(text_ent_carrier_list, "/veld/output/apis_ner__full_entities.json")
+    write_to_file(text_ent_carrier_list, OUT_JSON_UNCLEANED_PATH)
     # removing noise
     print("Starting removal of noise in NER tags.")
     text_ent_carrier_list = remove_ner_noise(text_ent_carrier_list)

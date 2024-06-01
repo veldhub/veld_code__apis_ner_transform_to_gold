@@ -22,5 +22,5 @@ services:
     build: .
     volumes:
       - ./src/:/veld/executable/
-    command: python /veld/executable/convert.py
+    command: python /veld/executable/extract_and_clean.py
 
