@@ -403,22 +403,14 @@ def write_to_file(text_ent_carrier_list: List[TextEntCarrier], output_path):
         
 
 def main():
-
-    # logger setup
-    logging.basicConfig(
-        filename=OUT_LOG_PATH,
-        filemode='w',
-        level=logging.DEBUG,
-        format='%(message)s',
-    )
     
     # extraction
-    print_and_log("Starting conversion.")
+    print_and_log("Starting extraction.")
     text_ent_carrier_list = extract_all()
     print_and_log(f"Done with extraction. Length of raw converted data: "
         f"{len(text_ent_carrier_list)}"
     )
-    
+
     # deduplication
     print_and_log("Starting deduplication.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
@@ -426,7 +418,7 @@ def main():
         f"{len(text_ent_carrier_list)}"
     )
     write_to_file(text_ent_carrier_list, OUT_JSON_UNCLEANED_PATH)
-    
+
     # clean
     print_and_log("Removing empty entity data items.")
     text_ent_carrier_list = remove_empty(text_ent_carrier_list)
@@ -437,7 +429,7 @@ def main():
     text_ent_carrier_list = fix_borders(text_ent_carrier_list)
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_PATH)
-    
+
     # simplify by removing ner noise
     print_and_log("Starting removal of noise in NER tags.")
     text_ent_carrier_list = remove_ner_noise(text_ent_carrier_list)
@@ -449,5 +441,10 @@ def main():
 
 
 if __name__ == "__main__":
-    print_and_log("with __main__")
+    logging.basicConfig(
+        filename=OUT_LOG_PATH,
+        filemode='w',
+        level=logging.DEBUG,
+        format='%(message)s',
+    )
     main()
