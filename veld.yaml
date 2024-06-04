@@ -1,5 +1,5 @@
 x-veld:
-  executable:
+  code:
     about:
       description: "hard-coded conversion of apis ner models to custom json format."
       topic:
@@ -21,6 +21,6 @@ services:
   veld:
     build: .
     volumes:
-      - ./src/:/veld/executable/
-    command: python /veld/executable/extract_and_clean.py
+      - ./src/:/veld/code/
+    command: python /veld/code/extract_and_clean.py
 
