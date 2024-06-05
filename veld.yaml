@@ -2,25 +2,56 @@ x-veld:
   code:
     about:
       description: "hard-coded conversion of apis ner models to custom json format."
-      topic:
+      topics:
         - "ETL"
-        - "data sanitization"
-    input:
-      type: "folder"
-      format: "custom"
-      content: "Named entity recognition gold data"
-      path: /veld/input/
+        - "data cleaning"
+
+    inputs:
+      volume: /veld/input/
       description: "This input is hard-wired to the apis spacy-ner repo and not made for generic usage."
-    output:
-      type: "folder"
-      format: "json"
-      content: "Named entity recognition gold data"
-      path: /veld/output/
+      file_formats:
+        - "pickle"
+        - "txt"
+        - "json"
+      contents: "NER gold data"
+
+    outputs:
+      volume: /veld/output/
+      file_formats:
+        - "json"
+        - "txt"
+      contents:
+        - "NER gold data"
+        - "logging"
+
+    environment:
+      out_json_uncleaned_path:
+        description: "raw uncleaned, as it was originally. Now just transformed to json."
+        type: path
+        path_prefix: "/veld/output/1/"
+      out_json_cleaned_path:
+        description: "removed empty entity annotations and fixed border issues."
+        type: path
+        path_prefix: "/veld/output/1/"
+      out_json_cleaned_simplified_path:
+        description: "additionally to cleaning, this data is slimmed down from superfluous entity 
+          ids in favor of simplified entity classes."
+        type: path
+        path_prefix: "/veld/output/1/"
+      out_log_path:
+        description: "log file."
+        type: path
+        path_prefix: "/veld/output/2/"
 
 services:
   veld:
     build: .
+    command: python /veld/code/extract_and_clean.py
     volumes:
       - ./src/:/veld/code/
-    command: python /veld/code/extract_and_clean.py
+    environment:
+      out_json_uncleaned_path: null
+      out_json_cleaned_path: null
+      out_json_cleaned_simplified_path: null
+      out_log_path: null
 
