@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from typing import List
 
 
-OUT_JSON_UNCLEANED_PATH = os.getenv("out_json_uncleaned_path")
-OUT_JSON_CLEANED_PATH = os.getenv("out_json_cleaned_path")                                          
-OUT_JSON_CLEANED_SIMPLIFIED_PATH = os.getenv("out_json_cleaned_simplified_path")                    
-OUT_LOG_PATH = os.getenv("out_log_path")
+OUT_JSON_UNCLEANED_FILE = "/veld/output/1/" + os.getenv("out_json_uncleaned_file")
+OUT_JSON_CLEANED_FILE = "/veld/output/1/" + os.getenv("out_json_cleaned_file") 
+OUT_JSON_CLEANED_SIMPLIFIED_FILE = "/veld/output/1/" + os.getenv("out_json_cleaned_simplified_file")
+OUT_LOG_FILE = "/veld/output/2/" + os.getenv("out_log_file")
 
 
 @dataclass
@@ -417,7 +417,7 @@ def main():
     print_and_log(f"Done with deduplication. Length of deduplicated data: "
         f"{len(text_ent_carrier_list)}"
     )
-    write_to_file(text_ent_carrier_list, OUT_JSON_UNCLEANED_PATH)
+    write_to_file(text_ent_carrier_list, OUT_JSON_UNCLEANED_FILE)
 
     # clean
     print_and_log("Removing empty entity data items.")
@@ -428,7 +428,7 @@ def main():
     print_and_log("Fixing borders.")
     text_ent_carrier_list = fix_borders(text_ent_carrier_list)
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
-    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_PATH)
+    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_FILE)
 
     # simplify by removing ner noise
     print_and_log("Starting removal of noise in NER tags.")
@@ -437,12 +437,12 @@ def main():
     print_and_log("Starting deduplication again for denoised data.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     print_and_log("Done with deduplication.")
-    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_SIMPLIFIED_PATH)
+    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_SIMPLIFIED_FILE)
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        filename=OUT_LOG_PATH,
+        filename=OUT_LOG_FILE,
         filemode='w',
         level=logging.DEBUG,
         format='%(message)s',
