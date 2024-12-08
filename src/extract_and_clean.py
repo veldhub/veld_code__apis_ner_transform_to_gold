@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -6,11 +7,49 @@ import re
 from dataclasses import dataclass
 from typing import List
 
+import yaml
 
-OUT_JSON_UNCLEANED_FILE = "/veld/output/1/" + os.getenv("out_json_uncleaned_file")
-OUT_JSON_CLEANED_FILE = "/veld/output/1/" + os.getenv("out_json_cleaned_file") 
-OUT_JSON_CLEANED_SIMPLIFIED_FILE = "/veld/output/1/" + os.getenv("out_json_cleaned_simplified_file")
-OUT_LOG_FILE = "/veld/output/2/" + os.getenv("out_log_file")
+
+# output data
+UNCLEANED_FOLDER = "/veld/output/uncleaned/"
+CLEANED_FOLDER = "/veld/output/cleaned/"
+CLEANED_SIMPLIFIED_FOLDER = "/veld/output/cleaned_simplified/"
+OUT_JSON_UNCLEANED_FILE = UNCLEANED_FOLDER + os.getenv("out_json_uncleaned_file")
+OUT_JSON_CLEANED_FILE = CLEANED_FOLDER + os.getenv("out_json_cleaned_file") 
+OUT_JSON_CLEANED_SIMPLIFIED_FILE = CLEANED_SIMPLIFIED_FOLDER + os.getenv("out_json_cleaned_simplified_file")
+OUT_VELD_YAML_UNCLEANED_FILE = UNCLEANED_FOLDER + "veld.yaml"
+OUT_VELD_YAML_CLEANED_FILE = CLEANED_FOLDER + "veld.yaml"
+OUT_VELD_YAML_CLEANED_SIMPLIFIED_FILE = CLEANED_SIMPLIFIED_FOLDER + "veld.yaml"
+OUT_LOG_FILE = "/veld/output/log/" + os.getenv("out_log_file")
+
+# output veld metadata
+VELD_DATA_TEMPLATE = {
+    "x-veld": {
+        "data": {
+            "file_type": "json",
+            "description": None,
+            "contents": ["gold data", "NER gold data", "NLP gold data"],
+            "topics": ["NLP", "Named entity recognition"],
+            "additional": None,
+        }
+    }
+}
+OUT_VELD_DATA_UNCLEANED = copy.deepcopy(VELD_DATA_TEMPLATE)
+OUT_VELD_DATA_UNCLEANED["x-veld"]["data"]["description"] = "The original, but united, data " \
+    "coming from APIS / ÖBL."
+OUT_VELD_DATA_CLEANED = copy.deepcopy(VELD_DATA_TEMPLATE)
+OUT_VELD_DATA_CLEANED["x-veld"]["data"]["description"] = "Overlapping entities are removed, index" \
+    " offsets corrected, and duplicates removed. Also texts without any entities are removed too," \
+    " since it's not known if they don't contain any entities (which often is not true; quite a" \
+    " few of them contain entities) or if the annotators simply didn't go through them (which is" \
+    " more likely, hence they were removed). In the original uncleaned data, some entity types" \
+    " are suffixed with numbers (e.g. `PER-1337`). These were used for identifying entities in a" \
+    " project context, but are probably of less use for NER NLP training. This dataset keeps the" \
+    " identifiers."
+OUT_VELD_DATA_CLEANED_SIMPLIFIED = copy.deepcopy(VELD_DATA_TEMPLATE)
+OUT_VELD_DATA_CLEANED_SIMPLIFIED["x-veld"]["data"]["description"] = "Same as the cleaned data," \
+    " but with simplified entities (e.g. `PER` instead of `PER-1337`). Probably it's best to use" \
+    " this data set for NER training."
 
 
 @dataclass
@@ -72,7 +111,6 @@ def convert_text_entities_tuple_format(text_entities_tuple_list):
                     entity_type=entities_tuple[2],
                 )
             )
-        
         text_ent_carrier_list_tmp.append(
             TextEntCarrier(
                 text_raw=text_entities_tuple[0], entity_marker_list=entity_marker_list_tmp
@@ -98,7 +136,6 @@ def convert_text_entities_class_format(text_entities_class_list):
                     entity_type=entities_class.label,
                 )
             )
-        
         text_ent_carrier_list_tmp.append(
             TextEntCarrier(
                 text_raw=text_entities_class[0], entity_marker_list=entity_marker_list_tmp
@@ -109,6 +146,7 @@ def convert_text_entities_class_format(text_entities_class_list):
 
 
 def convert_txt_data(file_path):
+
     def read_data_from_txt(mypath):
         """
         copied from:
@@ -139,7 +177,6 @@ def convert_txt_data(file_path):
                         # we found a non-empty line to try to use for e again
                 i += 1
                 mydata.append((t, e, None, None))
-        
         return mydata
     
     print_and_log(f"convert_txt_data: {file_path}")
@@ -171,10 +208,8 @@ def evaluate_json_data(file_path, text_ent_carrier_list):
                 if paragraph["raw"] in tec.text_raw:
                     count_found += 1
                     found_this = True
-            
             if not found_this:
                 count_not_found += 1
-        
         print_and_log(f"count_found: {count_found}, count_not_found: {count_not_found}")
 
 
@@ -224,27 +259,32 @@ def deduplicate(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEntCarr
     The parsed data from the steps beforehand contain multiple redundancies. Both in texts and the
     entities some texts are assigned on. This function removes all of them.
     """
+
     # collect all NER data for each text
     tec_dict = {}
     for tec in text_ent_carrier_list:
         tec_pre = tec_dict.get(tec.text_raw, None)
+
         # If some text with entities already exists before it, merge the two
         if tec_pre is not None and tec_pre.entity_marker_list != tec.entity_marker_list:
             tec.entity_marker_list.extend(tec_pre.entity_marker_list)
+
         tec_dict[tec.text_raw] = tec
     
     # go through all NER data and remove duplicates, store into new list
     text_ent_carrier_list_new = []
     for tec in tec_dict.values():
+
         # create new object
         tec_new = TextEntCarrier(text_raw=tec.text_raw, entity_marker_list=[])
+        
         # Create a temporary set to guarantee the uniqueness of tag, beginning, end
         em_set_tmp = set()
         for em in tec.entity_marker_list:
             em_tuple = (em.index_beginning, em.index_end, em.entity_type)
             em_set_tmp.add(em_tuple)
-            
         em_list_tmp = list(em_set_tmp)
+
         # sort by all ner data, to make the output data reliably consistent.
         em_list_tmp.sort(key=lambda x: x[2])
         em_list_tmp.sort(key=lambda x: x[1])
@@ -274,7 +314,6 @@ def remove_ner_noise(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEn
     for tec in text_ent_carrier_list:
         for em in tec.entity_marker_list:
             em.entity_type = re.sub(r"-[0-9]*$", "", em.entity_type)
-    
     return text_ent_carrier_list
 
 
@@ -396,9 +435,32 @@ def fix_borders(text_ent_carrier_list: List[TextEntCarrier]) -> List[TextEntCarr
     return fix_borders_main(text_ent_carrier_list)
 
 
-def write_to_file(text_ent_carrier_list: List[TextEntCarrier], output_path):
+def write_to_file(
+    text_ent_carrier_list: List[TextEntCarrier], 
+    output_data_path, 
+    output_veld_data,
+    output_veld_data_path,
+):
     text_ent_dict_list = [tec.to_dict() for tec in text_ent_carrier_list]
-    with open(output_path, "w") as f:
+
+    # calculate stats for metadata
+    stats_entities = {}
+    stats_total_count = 0
+    for text_ent_dict in text_ent_dict_list:
+        for ent in text_ent_dict["entities"]:
+            ent_count = stats_entities.get(ent[2], 0)
+            stats_entities[ent[2]] = ent_count + 1
+            stats_total_count += 1
+    stats_entities = {
+        "total count of entities": stats_total_count,
+        "individual count of entities": stats_entities
+    }
+    output_veld_data["x-veld"]["data"]["additional"] = stats_entities
+
+    # write data and veld metadata
+    with open(output_veld_data_path, "w") as f:
+        yaml.dump(output_veld_data, f, sort_keys=False, allow_unicode=True)
+    with open(output_data_path, "w") as f:
         json.dump(text_ent_dict_list, f, ensure_ascii=False, indent=2)
         
 
@@ -417,7 +479,12 @@ def main():
     print_and_log(f"Done with deduplication. Length of deduplicated data: "
         f"{len(text_ent_carrier_list)}"
     )
-    write_to_file(text_ent_carrier_list, OUT_JSON_UNCLEANED_FILE)
+    write_to_file(
+        text_ent_carrier_list,
+        OUT_JSON_UNCLEANED_FILE,
+        OUT_VELD_DATA_UNCLEANED,
+        OUT_VELD_YAML_UNCLEANED_FILE
+    )
 
     # clean
     print_and_log("Removing empty entity data items.")
@@ -428,7 +495,12 @@ def main():
     print_and_log("Fixing borders.")
     text_ent_carrier_list = fix_borders(text_ent_carrier_list)
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
-    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_FILE)
+    write_to_file(
+        text_ent_carrier_list,
+        OUT_JSON_CLEANED_FILE,
+        OUT_VELD_DATA_CLEANED,
+        OUT_VELD_YAML_CLEANED_FILE
+    )
 
     # simplify by removing ner noise
     print_and_log("Starting removal of noise in NER tags.")
@@ -437,7 +509,12 @@ def main():
     print_and_log("Starting deduplication again for denoised data.")
     text_ent_carrier_list = deduplicate(text_ent_carrier_list)
     print_and_log("Done with deduplication.")
-    write_to_file(text_ent_carrier_list, OUT_JSON_CLEANED_SIMPLIFIED_FILE)
+    write_to_file(
+        text_ent_carrier_list,
+        OUT_JSON_CLEANED_SIMPLIFIED_FILE,
+        OUT_VELD_DATA_CLEANED_SIMPLIFIED,
+        OUT_VELD_YAML_CLEANED_SIMPLIFIED_FILE
+    )
 
 
 if __name__ == "__main__":
@@ -448,3 +525,4 @@ if __name__ == "__main__":
         format='%(message)s',
     )
     main()
+
