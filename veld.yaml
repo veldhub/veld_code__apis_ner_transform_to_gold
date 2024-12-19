@@ -3,7 +3,7 @@ x-veld:
     description: "hard-coded conversion of apis ner models to custom json format."
     topic:
       - "ETL"
-      - "data cleaning"
+      - "Data Cleaning"
 
     input:
       - volume: /veld/input/
